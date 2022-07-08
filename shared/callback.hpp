@@ -6,9 +6,9 @@
 
 struct SwingInfo {
     GlobalNamespace::CutScoreBuffer* scoreBuffer;
-    bool leftSaber;
-    int preSwing = 0;
-    int postSwing = 0;
+    bool rightSaber;
+    float preSwing = 0;
+    float postSwing = 0;
 };
 
 extern UnorderedEventCallback<SwingInfo> overswingCallbacks;

@@ -25,8 +25,8 @@ MAKE_HOOK_MATCH(CutScoreBuffer_Init, &CutScoreBuffer::Init, bool, CutScoreBuffer
     
     swingMap.emplace(self->saberSwingRatingCounter, SwingInfo());
     swingMap[self->saberSwingRatingCounter].scoreBuffer = self;
-    swingMap[self->saberSwingRatingCounter].leftSaber = self->noteCutInfo.saberType == SaberType::SaberA;
-    
+    swingMap[self->saberSwingRatingCounter].rightSaber = noteCutInfo->saberType == SaberType::SaberB;
+
     return CutScoreBuffer_Init(self, noteCutInfo);
 }
 
@@ -35,7 +35,7 @@ MAKE_HOOK_MATCH(SaberSwingRatingCounter_Init, &SaberSwingRatingCounter::Init, vo
     
     SaberSwingRatingCounter_Init(self, saberMovementData, notePosition, noteRotation, rateBeforeCut, rateAfterCut);
 
-    int& total = swingMap[self].postSwing;
+    float& total = swingMap[self].preSwing;
 
     if(self->rateBeforeCut)
         total += self->beforeCutRating;
@@ -59,7 +59,7 @@ MAKE_HOOK_MATCH(SaberSwingRatingCounter_ProcessNewData, &SaberSwingRatingCounter
     
     SaberSwingRatingCounter_ProcessNewData(self, newData, prevData, prevDataAreValid);
 
-    int& total = swingMap[self].postSwing;
+    float& total = swingMap[self].postSwing;
 
     if(!alreadyCut) {
         float postAngle = UnityEngine::Vector3::Angle(self->cutTopPos - self->cutBottomPos, self->afterCutTopPos - self->afterCutBottomPos);
