@@ -24,6 +24,7 @@ std::unordered_map<SaberSwingRatingCounter*, SwingInfo> swingMap;
 MAKE_HOOK_MATCH(CutScoreBuffer_Init, &CutScoreBuffer::Init, bool, CutScoreBuffer* self, ByRef<NoteCutInfo> noteCutInfo) {
     
     swingMap.emplace(self->saberSwingRatingCounter, SwingInfo());
+    swingMap[self->saberSwingRatingCounter].scoreBuffer = self;
     swingMap[self->saberSwingRatingCounter].leftSaber = self->noteCutInfo.saberType == SaberType::SaberA;
     
     return CutScoreBuffer_Init(self, noteCutInfo);
