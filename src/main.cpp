@@ -37,8 +37,7 @@ MAKE_HOOK_MATCH(SaberSwingRatingCounter_Init, &SaberSwingRatingCounter::Init, vo
 
     float& total = swingMap[self].preSwing;
 
-    if(self->rateBeforeCut)
-        total += self->beforeCutRating;
+    total = self->beforeCutRating;
 
     if(self->beforeCutRating > 1)
         self->beforeCutRating = 1;
@@ -61,7 +60,9 @@ MAKE_HOOK_MATCH(SaberSwingRatingCounter_ProcessNewData, &SaberSwingRatingCounter
 
     float& total = swingMap[self].postSwing;
 
-    if(!alreadyCut) {
+    if(!self->rateAfterCut)
+        total = self->afterCutRating;
+    else if(!alreadyCut) {
         float postAngle = UnityEngine::Vector3::Angle(self->cutTopPos - self->cutBottomPos, self->afterCutTopPos - self->afterCutBottomPos);
         total += SaberSwingRating::AfterCutStepRating(postAngle, 0);
     } else {
