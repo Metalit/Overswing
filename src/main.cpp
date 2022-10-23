@@ -23,9 +23,10 @@ std::unordered_map<SaberSwingRatingCounter*, SwingInfo> swingMap;
 // populates the SaberSwingRatingCounter -> CutScoreBuffer map specifically before SaberSwingRatingCounter.Init
 MAKE_HOOK_MATCH(CutScoreBuffer_Init, &CutScoreBuffer::Init, bool, CutScoreBuffer* self, ByRef<NoteCutInfo> noteCutInfo) {
     
-    swingMap.emplace(self->saberSwingRatingCounter, SwingInfo());
-    swingMap[self->saberSwingRatingCounter].scoreBuffer = self;
-    swingMap[self->saberSwingRatingCounter].rightSaber = noteCutInfo->saberType == SaberType::SaberB;
+    swingMap[self->saberSwingRatingCounter] = SwingInfo{
+        .scoreBuffer = self,
+        .rightSaber = noteCutInfo->saberType == SaberType::SaberB
+    };
 
     return CutScoreBuffer_Init(self, noteCutInfo);
 }
@@ -35,9 +36,7 @@ MAKE_HOOK_MATCH(SaberSwingRatingCounter_Init, &SaberSwingRatingCounter::Init, vo
     
     SaberSwingRatingCounter_Init(self, saberMovementData, notePosition, noteRotation, rateBeforeCut, rateAfterCut);
 
-    float& total = swingMap[self].preSwing;
-
-    total = self->beforeCutRating;
+    swingMap[self].preSwing = self->beforeCutRating;
 
     if(self->beforeCutRating > 1)
         self->beforeCutRating = 1;
@@ -76,7 +75,7 @@ MAKE_HOOK_MATCH(SaberSwingRatingCounter_ProcessNewData, &SaberSwingRatingCounter
 }
 
 // override to remove clamping at the end of this method and sort it out elsewhere so we can add up overswings
-MAKE_HOOK_MATCH(SaberMovementData_CalculateSwingRating, static_cast<float (SaberMovementData::*)(bool, float)>(&SaberMovementData::ComputeSwingRating), float, SaberMovementData* self, bool overrideSegmenAngle, float overrideValue) {
+MAKE_HOOK_MATCH(SaberMovementData_ComputeSwingRating, static_cast<float (SaberMovementData::*)(bool, float)>(&SaberMovementData::ComputeSwingRating), float, SaberMovementData* self, bool overrideSegmenAngle, float overrideValue) {
     if (self->validCount < 2)
         return 0;
 
@@ -138,7 +137,7 @@ extern "C" void load() {
     INSTALL_HOOK(logger, CutScoreBuffer_Init);
     INSTALL_HOOK(logger, SaberSwingRatingCounter_Init);
     INSTALL_HOOK(logger, SaberSwingRatingCounter_ProcessNewData);
-    INSTALL_HOOK_ORIG(logger, SaberMovementData_CalculateSwingRating);
+    INSTALL_HOOK_ORIG(logger, SaberMovementData_ComputeSwingRating);
     INSTALL_HOOK(logger, SaberSwingRatingCounter_Finish);
     getLogger().info("Installed all hooks!");
 }
