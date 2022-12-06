@@ -62,5 +62,4 @@ $zip = $qmodName + ".zip"
 $qmod = $qmodName + ".qmod"
 
 Compress-Archive -Path $filelist -DestinationPath $zip -Update
-sleep 1
 Move-Item $zip $qmod -Force
