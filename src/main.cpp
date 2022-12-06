@@ -22,21 +22,23 @@ std::unordered_map<SaberSwingRatingCounter*, SwingInfo> swingMap;
 
 // populates the SaberSwingRatingCounter -> CutScoreBuffer map specifically before SaberSwingRatingCounter.Init
 MAKE_HOOK_MATCH(CutScoreBuffer_Init, &CutScoreBuffer::Init, bool, CutScoreBuffer* self, ByRef<NoteCutInfo> noteCutInfo) {
-    
+
     swingMap[self->saberSwingRatingCounter] = SwingInfo{
         .scoreBuffer = self,
         .rightSaber = noteCutInfo->saberType == SaberType::SaberB
     };
+    LOG_DEBUG("Initialized SwingInfo with saberSwingRatingCounter %p", self->saberSwingRatingCounter);
 
     return CutScoreBuffer_Init(self, noteCutInfo);
 }
 
 // calculate pre swing overswing and also ensure the pre swing is clamped
 MAKE_HOOK_MATCH(SaberSwingRatingCounter_Init, &SaberSwingRatingCounter::Init, void, SaberSwingRatingCounter* self, ISaberMovementData* saberMovementData, UnityEngine::Vector3 notePosition, UnityEngine::Quaternion noteRotation, bool rateBeforeCut, bool rateAfterCut) {
-    
+
     SaberSwingRatingCounter_Init(self, saberMovementData, notePosition, noteRotation, rateBeforeCut, rateAfterCut);
 
     swingMap[self].preSwing = self->beforeCutRating;
+    LOG_DEBUG("Set preswing for saberSwingRatingCounter %p to %.3f", self, self->beforeCutRating);
 
     if(self->beforeCutRating > 1)
         self->beforeCutRating = 1;
@@ -44,7 +46,7 @@ MAKE_HOOK_MATCH(SaberSwingRatingCounter_Init, &SaberSwingRatingCounter::Init, vo
 
 // calculate post swing overswing and also ensure the pre swing is clamped
 MAKE_HOOK_MATCH(SaberSwingRatingCounter_ProcessNewData, &SaberSwingRatingCounter::ProcessNewData, void, SaberSwingRatingCounter* self, BladeMovementDataElement newData, BladeMovementDataElement prevData, bool prevDataAreValid) {
-    
+
     bool alreadyCut = self->notePlaneWasCut;
 
     // avoid clamping in this method only when called from Init
@@ -54,7 +56,7 @@ MAKE_HOOK_MATCH(SaberSwingRatingCounter_ProcessNewData, &SaberSwingRatingCounter
     // unless Init calculates a value below one and then here we calculate a value above one, in which case it will be clamped
     // but hopefully that isn't too significant, as it would be kind of complicated to fix
     bool dontClamp = self->beforeCutRating > 1;
-    
+
     SaberSwingRatingCounter_ProcessNewData(self, newData, prevData, prevDataAreValid);
 
     float& total = swingMap[self].postSwing;
@@ -68,7 +70,13 @@ MAKE_HOOK_MATCH(SaberSwingRatingCounter_ProcessNewData, &SaberSwingRatingCounter
         float num = UnityEngine::Vector3::Angle(newData.segmentNormal, self->cutPlaneNormal);
         total += SaberSwingRating::AfterCutStepRating(newData.segmentAngle, num);
     }
-    
+    LOG_DEBUG("Set postswing for saberSwingRatingCounter %p to %.3f", self, total);
+    // sometimes this method recalculates the pre swing
+    float& pre = swingMap[self].preSwing;
+    if(self->beforeCutRating > pre) {
+        pre = self->beforeCutRating;
+        LOG_DEBUG("Set preswing for saberSwingRatingCounter %p to %.3f", self, pre);
+    }
     // correct for change in ComputeSwingRating
     if(self->beforeCutRating > 1 && !dontClamp)
         self->beforeCutRating = 1;
@@ -76,6 +84,7 @@ MAKE_HOOK_MATCH(SaberSwingRatingCounter_ProcessNewData, &SaberSwingRatingCounter
 
 // override to remove clamping at the end of this method and sort it out elsewhere so we can add up overswings
 MAKE_HOOK_MATCH(SaberMovementData_ComputeSwingRating, static_cast<float (SaberMovementData::*)(bool, float)>(&SaberMovementData::ComputeSwingRating), float, SaberMovementData* self, bool overrideSegmenAngle, float overrideValue) {
+
     if (self->validCount < 2)
         return 0;
 
@@ -112,32 +121,34 @@ MAKE_HOOK_MATCH(SaberMovementData_ComputeSwingRating, static_cast<float (SaberMo
 // remove counters from map and send callbacks when they finish
 MAKE_HOOK_MATCH(SaberSwingRatingCounter_Finish, &SaberSwingRatingCounter::Finish, void, SaberSwingRatingCounter* self) {
 
-    SaberSwingRatingCounter_Finish(self);
-    
     auto iter = swingMap.find(self);
     if(iter != swingMap.end()) {
         overswingCallbacks.invoke(iter->second);
         swingMap.erase(iter);
-    }
+        LOG_DEBUG("Removed saberSwingRatingCounter %p", self);
+    } else
+        LOG_DEBUG("Failed to remove saberSwingRatingCounter %p", self);
+
+    SaberSwingRatingCounter_Finish(self);
 }
 
 extern "C" void setup(ModInfo& info) {
     info.id = MOD_ID;
     info.version = VERSION;
     modInfo = info;
-	
+
     getLogger().info("Completed setup!");
 }
 
 extern "C" void load() {
     il2cpp_functions::Init();
 
-    getLogger().info("Installing hooks...");
+    LOG_INFO("Installing hooks...");
     LoggerContextObject logger = getLogger().WithContext("load");
     INSTALL_HOOK(logger, CutScoreBuffer_Init);
     INSTALL_HOOK(logger, SaberSwingRatingCounter_Init);
     INSTALL_HOOK(logger, SaberSwingRatingCounter_ProcessNewData);
     INSTALL_HOOK_ORIG(logger, SaberMovementData_ComputeSwingRating);
     INSTALL_HOOK(logger, SaberSwingRatingCounter_Finish);
-    getLogger().info("Installed all hooks!");
+    LOG_INFO("Installed all hooks!");
 }
