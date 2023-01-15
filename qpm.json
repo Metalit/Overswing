@@ -4,8 +4,8 @@
   "info": {
     "name": "Overswing",
     "id": "overswing",
-    "version": "0.1.1",
-    "url": null,
+    "version": "0.1.0",
+    "url": "https://github.com/Metalit/Overswing",
     "additionalData": {
       "overrideSoName": "liboverswing.so"
     }
