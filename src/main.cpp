@@ -61,9 +61,7 @@ MAKE_HOOK_MATCH(SaberSwingRatingCounter_ProcessNewData, &SaberSwingRatingCounter
 
     float& total = swingMap[self].postSwing;
 
-    if(!self->rateAfterCut)
-        total = self->afterCutRating;
-    else if(!alreadyCut) {
+    if(!alreadyCut) {
         float postAngle = UnityEngine::Vector3::Angle(self->cutTopPos - self->cutBottomPos, self->afterCutTopPos - self->afterCutBottomPos);
         total += SaberSwingRating::AfterCutStepRating(postAngle, 0);
     } else {
@@ -127,7 +125,7 @@ MAKE_HOOK_MATCH(SaberSwingRatingCounter_Finish, &SaberSwingRatingCounter::Finish
         swingMap.erase(iter);
         LOG_DEBUG("Removed saberSwingRatingCounter %p", self);
     } else
-        LOG_DEBUG("Failed to remove saberSwingRatingCounter %p", self);
+        LOG_INFO("Failed to remove saberSwingRatingCounter! %p", self);
 
     SaberSwingRatingCounter_Finish(self);
 }
